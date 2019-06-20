@@ -1,0 +1,38 @@
+body{
+  font-family:  Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+}
+
+#chart_div{
+  width: 100%;
+  height: 100vh;
+}
+
+.tooltip{
+  visibility: hidden;
+  border: 1px solid grey;
+  border-radius: 4px;
+  position: absolute;
+  text-align: center;
+  font-weight: bold;
+  padding: 3px;
+  background: white;
+  pointer-events: none;
+  font-size: 1em;
+  width: auto;
+  height: auto;
+  z-index: 5;
+}
+
+.area {
+  fill: steelblue;
+  clip-path: url(#clip);
+}
+
+.zoom {
+  cursor: move;
+  fill: none;
+  pointer-events: all;
+}
