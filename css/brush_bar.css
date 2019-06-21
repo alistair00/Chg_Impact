@@ -26,8 +26,7 @@ body{
   z-index: 5;
 }
 
-.area {
-  fill: steelblue;
+.focus_bar_group, .context_bar_group  {
   clip-path: url(#clip);
 }
 
