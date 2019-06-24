@@ -2,7 +2,7 @@
 
 
 function brush_bar_chart() {
-    //REUSABLE aster chart
+    //REUSABLE brush bar chart
 
 
     var x_var="",
@@ -13,7 +13,11 @@ function brush_bar_chart() {
         my_data = [],
         focus_data = [],
         brush_height = 80,
-        margin_bottom = 30;
+        margin_bottom = 30,
+        start_plus = 3,
+        start_width = 8,
+        context="",
+        focus="";
 
     //core functionality copied from https://bl.ocks.org/mbostock/34f08d5e11952a80609169b7917d4172
     function my(svg) {
@@ -43,9 +47,11 @@ function brush_bar_chart() {
         x2_scale.domain(x_scale.domain());
         y2_scale.domain(y_scale.domain());
 
+        //set colour scale
         var colour_scale = d3.scaleThreshold()
             .range(["#6b486b", "#7b6888", "#8a89a6", "#a3a2C4", "#a05d56", "#d0743c", "#ffb53d", "#ffcd5e"])
-            .domain([6,9,12,15,18,21])
+            .domain([5,9,13,17,21,25,29]);
+
         //set brush and zoom;
         var brush = d3.brushX()
             .extent([[0, 0], [width, height_2]])
@@ -57,36 +63,46 @@ function brush_bar_chart() {
             .extent([[0, 0], [width, height]])
             .on("zoom", zoomed);
 
+
+        //set once only items
         if(d3.select(".content")._groups[0][0] == null){
 
+            //clip path - enabled in css
             svg.append("defs").append("clipPath")
                 .attr("id", "clip")
                 .append("rect")
                 .attr("width", width)
                 .attr("height", height);
 
-            var focus = svg.append("g")
+            //context - which is the brush chart group.
+            context = svg.append("g")
+                .attr("class", "context")
+                .attr("transform", "translate(" + margin_2.left + "," + margin_2.top + ")");
+
+            //x_axis, bar group and brush
+            context.append("g").attr("class", "axis axis--x");
+            context.append("g").attr("class", "bar_group");
+            context.append("g").attr("class", "brush");
+
+            //now append zoom - needs to be below 'focus' rects otherwise tooltips won't work
+            svg.append("rect").attr("class", "zoom");
+
+            //focus - top bars
+            focus = svg.append("g")
                 .attr("class", "focus")
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
             focus.append("g").attr("class", "axis axis--x");
             focus.append("g").attr("class", "axis axis--y");
             focus.append("g").attr("class", "bar_group")
-
-
-            var context = svg.append("g")
-                .attr("class", "context")
-                .attr("transform", "translate(" + margin_2.left + "," + margin_2.top + ")");
-
-            context.append("g").attr("class", "axis axis--x");
-            context.append("g").attr("class", "bar_group")
-            context.append("g").attr("class", "brush");
-
-            svg.append("rect").attr("class", "zoom");
         } else {
-            var focus = svg.select(".focus");
-            var context = svg.select(".context");
+            focus = svg.select(".focus");
+            context = svg.select(".context");
         }
+
+        //now for the bars.
+
+        //first the the context (brush bars)
 
         var my_group = context.select(".bar_group").selectAll(".context_bar_group")
                               .data(my_data);
@@ -101,6 +117,7 @@ function brush_bar_chart() {
 
         update_rects(my_group.select(".context_rect"),x2_scale,y2_scale, height_2);
 
+        //now the focus (top chart bars)
         var focus_group = focus.select(".bar_group").selectAll(".focus_bar_group")
             .data(focus_data);
 
@@ -114,13 +131,13 @@ function brush_bar_chart() {
 
         update_sub_rects(focus_group.select(".focus_rect"),x_scale,y_scale);
 
+        //set the axes, brush and zoom
         focus.select(".axis--x")
             .call(x_axis)
             .attr("transform", "translate(0," + height + ")");
 
         focus.select(".axis--y")
             .call(y_axis);
-
 
         context.select(".axis--x")
             .call(x_axis_2)
@@ -136,6 +153,15 @@ function brush_bar_chart() {
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
             .call(zoom);
 
+
+        //and finally set the default start for the brush.
+        //see vars above - start_plus currently === 3, start_width currently === 8, as specified in requirements
+        var start_brush = x_scale(d3.timeMonth.offset(x_scale.domain()[0],start_plus));
+        var end_brush = x_scale(d3.timeMonth.offset(x_scale.domain()[0],(start_plus + start_width)));
+
+        context.select(".brush").call(brush.move, [start_brush,end_brush]);
+
+        //brush function.
         function brushed() {
             if (d3.event.sourceEvent && d3.event.sourceEvent.type === "zoom") return; // ignore brush-by-zoom
             var s = d3.event.selection || x2_scale.range();
@@ -150,28 +176,7 @@ function brush_bar_chart() {
                 .translate(-s[0], 0));
         }
 
-        function update_rects(rect_group,my_x_scale,my_y_scale,my_height){
-
-            rect_group.attr("id", (d,i) => i)
-                      .attr("x",d => my_x_scale(d[x_var]))
-                      .attr("y", d => my_height - my_y_scale(d[y_var]))
-                      .attr("height", d => my_y_scale(d[y_var]))
-                      .attr("width",d => x_scale(d3.timeDay.offset(x_scale.domain()[0],d.days)))
-                      .attr("fill","#6b486b")
-                      .attr("stroke-width","0px");
-        }
-
-        function update_sub_rects(rect_group,my_x_scale,my_y_scale){
-
-            rect_group.attr("x",d => my_x_scale(new Date(d[x_var])) + 1)
-                .attr("y", d => my_y_scale(d.position))
-                .attr("height", y_scale(y_scale.domain()[1]-1)-2)
-                .attr("width",d => x_scale(d3.timeDay.offset(x_scale.domain()[0],d.days)) - 2)
-                .attr("fill", d => colour_scale(d.inference))
-                .attr("stroke-width","0px");
-        }
-
-
+        //zoom function
         function zoomed() {
             if (d3.event.sourceEvent && d3.event.sourceEvent.type === "brush") return; // ignore zoom-by-brush
             var t = d3.event.transform;
@@ -183,6 +188,81 @@ function brush_bar_chart() {
             context.select(".brush").call(brush.move, x_scale.range().map(t.invertX, t));
         }
 
+
+        function update_rects(rect_group,my_x_scale,my_y_scale,my_height){
+            //brush rects (static after initial load)
+            //width === no.of days in the month - 2px
+            rect_group.attr("id", (d,i) => i)
+                      .attr("x",d => my_x_scale(d[x_var]) + 1)
+                      .attr("y", d => my_height - my_y_scale(d[y_var]))
+                      .attr("height", d => my_y_scale(d[y_var]))
+                      .attr("width",d => x_scale(d3.timeDay.offset(x_scale.domain()[0],d.days)) - 2)
+                      .attr("fill","#6b486b")
+                      .attr("stroke-width","0px");
+        }
+
+        function update_sub_rects(rect_group,my_x_scale,my_y_scale){
+
+            //top chart rects (reset when zooming and brushing)
+            //width === no.of days in the month - 2px
+            //fill adds 16 when p_type === "LTIP" so that the scales run smoothly from top to bottom
+            rect_group.attr("x",d => my_x_scale(new Date(d[x_var])) + 1)
+                      .attr("id", d => "p" + strip_space_comma(d.p_name) )
+                      .attr("y", d => my_y_scale(d.position))
+                      .attr("height", y_scale(y_scale.domain()[1]-1)-2)
+                      .attr("width",d => x_scale(d3.timeDay.offset(x_scale.domain()[0],d.days)) - 2)
+                      .attr("fill", d => colour_scale(d.inference + get_colour_multiplier(d.p_type)))
+                      .attr("stroke-width","0px")
+                      .on("mouseover",function(d){
+                            //pointer cursor, highlight other bars for this project (see id)
+                            d3.select("this").attr("cursor","pointer");
+                            d3.selectAll(".focus_rect").attr("opacity",0.5);
+                            d3.selectAll("#" + this.id).attr("opacity",1);
+
+                            //tooltip text - see CSS for look and feel
+                            var tooltip_text = "<strong>Project Name: </strong>" + d.p_name + "<br>"
+                                + "<strong>Impacted groups: </strong>" + d.impact_g + "<br>"
+                                + "<strong>Impact (1-5): </strong>" + d.impact + "<br>"
+                                + "<strong>Inference: </strong>" + d.inference + "<br>"
+                                + "<strong>Next Action: </strong>" + d.next_action + "<br><br>"
+                                + "CLICK for more";
+
+                            //show tooltip
+                            d3.select(".tooltip")
+                                .style("visibility","visible")
+                                .style("top",(d3.event.y - 20) + "px")
+                                .style("left",(d3.event.x + 15) + "px")
+                                .html(tooltip_text)
+                        })
+                      .on("mouseout",function(){
+                            //return to normal
+                            d3.select("this").attr("cursor","default");
+                            d3.selectAll(".focus_rect").attr("opacity",1);
+                            d3.select(".tooltip").style("visibility","hidden")
+                      })
+                      .on("click",function(d){window.open(d.url)});
+
+         function get_colour_multiplier(my_type){
+                //see above
+                if(my_type === "LTIP"){
+                    return 16
+                } else {
+                    return 0
+                }
+            }
+        }
+
+        function strip_space_comma(my_txt){
+
+            //remove commas and spaces - for ids..
+            my_txt = my_txt.replace(/\s/g, "");
+            my_txt = my_txt.replace(/,/g, "");
+            my_txt = my_txt.replace(/\./g, "");
+            my_txt = my_txt.replace(/#/g, "");
+            my_txt = my_txt.replace(/-/g, "");
+
+            return my_txt;
+        }
 
     }
 

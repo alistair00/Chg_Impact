@@ -1,11 +1,9 @@
 d3.json("data/" + brush_bar.filename, function(my_data){
 
-    //workaround to handle the fact that there are duplicate keys and the
-    //first entry should be "chg01".
-
+    //format data
     var chart_data = get_data(my_data);
 
-    //draw svgs (photo and charts)
+    //draw svg;
     var chart_div = document.getElementById("chart_div");
 
     var height = chart_div.clientHeight;
@@ -21,6 +19,7 @@ d3.json("data/" + brush_bar.filename, function(my_data){
             .attr("height",height);
     }
 
+    //draw chart
     var my_chart = brush_bar_chart()
         .width(width)
         .height(height)
@@ -44,6 +43,7 @@ d3.json("data/" + brush_bar.filename, function(my_data){
         //y_axis === number of values
         //data = one record per month
 
+        //first nest by project
         var nest = d3.nest()
             .key(d => d.chg01)
             .entries(my_data);
@@ -51,7 +51,9 @@ d3.json("data/" + brush_bar.filename, function(my_data){
         var chart_data = [],month_data=[];
 
         for(var n in nest){
+            //calculate the 'month span' and create a record for each month
             var months = d3.timeMonth.range(get_date(nest[n].values[0].chg0a), new Date(get_date(nest[n].values[0].chg0b)));
+            //moving to more 'readable' values here to prevent errors.
             for(var m in months){
                 month_data.push({
                     "date": months[m],
@@ -59,38 +61,44 @@ d3.json("data/" + brush_bar.filename, function(my_data){
                     "p_type": nest[n].values[0].chg02,
                     "inference": nest[n].values[0].chg09,
                     "next_action":nest[n].values[0].chg0c,
-                    "url": nest[n].values[0].chg0e
+                    "url": nest[n].values[0].chg0e,
+                    "impact_g": nest[n].values[0].chg06,
+                    "impact":nest[n].values[0].chg08
                 })
             }
         }
+
+        //now nest by month.
         var month_nest = d3.nest()
             .key(d => d.date)
             .entries(month_data);
 
         var brush_data = [];
+
         for(var m in month_nest){
+            //add a record for each month to brush data (days needed for bar width)
             brush_data.push({
                 "date": new Date(month_nest[m].key),
                 "no_of_entries": month_nest[m].values.length,
                 "days": get_days(new Date(month_nest[m].key))
             });
+            //sort by project type then inference.
             month_nest[m].values.sort((a,b) => d3.ascending(a.p_type,b.p_type) || d3.descending(a.inference,b.inference));
+            //add a value for each entry
+            //repetition needed to record 'position' which places each individual bar on the 'focus' y axis
             for(var v in month_nest[m].values){
-                var colour_multiplier = 0;
-                if(month_nest[m].values[v].p_type === "LTIP"){
-                    colour_multiplier =14
-                }
                 chart_data.push({
                     "p_name": month_nest[m].values[v].p_name,
                     "p_type": month_nest[m].values[v].p_type,
                     "inference": month_nest[m].values[v].inference,
-                    "colour_inference":nest[n].values[0].chg09 + colour_multiplier,
                     "next_action":month_nest[m].values[v].next_action,
                     "url": month_nest[m].values[v].url,
                     "date": month_nest[m].key,
                     "days": get_days(new Date(month_nest[m].key)),
                     "position": month_nest[m].values.length - (+v),
-                    "no_of_entries": month_nest[m].values.length
+                    "no_of_entries": month_nest[m].values.length,
+                    "impact_g": nest[n].values[0].chg06,
+                    "impact":nest[n].values[0].chg08
                 })
             }
         }
@@ -100,22 +108,20 @@ d3.json("data/" + brush_bar.filename, function(my_data){
             //sample format "15/11/2021"
             my_date = my_date.split("/");
             var month = +my_date[1]-1;  //date months run from 0 (Jan) to 11 (Dec)
-            //first calculate new date
-            var new_date = new Date(my_date[2],month,my_date[0]);
-
-            return new_date;
+            //returns formatted date
+            return new Date(my_date[2],month,my_date[0]);
         }
 
         function get_days(my_date){
+            //returns number of days in a month
             my_date = new Date(my_date);
             var next_month = d3.timeMonth.offset(my_date,1);
-            var days = d3.timeDay.count(my_date,next_month);
 
 
-            return days;
+            return d3.timeDay.count(my_date,next_month);
         }
-
-        return {"chart": chart_data.sort((a,b) => d3.ascending(a.date,b.date)),"brush": brush_data.sort((a,b) => d3.ascending(a.date,b.date))};
+        //sort again and return
+        return {"chart": chart_data.sort((a,b) => d3.ascending(a.date,b.date) ||d3.descending(a.inference,b.inference) ),"brush": brush_data.sort((a,b) => d3.ascending(a.date,b.date))};
 
 
     }

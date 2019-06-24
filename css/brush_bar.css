@@ -12,18 +12,18 @@ body{
 
 .tooltip{
   visibility: hidden;
-  border: 1px solid grey;
+  border: 1px solid #A0A0A0;
   border-radius: 4px;
   position: absolute;
-  text-align: center;
-  font-weight: bold;
+  text-align: left;
   padding: 3px;
   background: white;
   pointer-events: none;
-  font-size: 1em;
+  font-size: 0.9em;
   width: auto;
   height: auto;
   z-index: 5;
+  margin-right: 40px;
 }
 
 .focus_bar_group, .context_bar_group  {
