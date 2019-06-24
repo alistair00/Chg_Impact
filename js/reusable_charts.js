@@ -194,8 +194,8 @@ function brush_bar_chart() {
             //width === no.of days in the month - 2px
             rect_group.attr("id", (d,i) => i)
                       .attr("x",d => my_x_scale(d[x_var]) + 1)
-                      .attr("y", d => my_height - my_y_scale(d[y_var]))
-                      .attr("height", d => my_y_scale(d[y_var]))
+                      .attr("y", d =>  my_y_scale(d[y_var]))
+                      .attr("height", d => my_height - my_y_scale(d[y_var]))
                       .attr("width",d => x_scale(d3.timeDay.offset(x_scale.domain()[0],d.days)) - 2)
                       .attr("fill","#6b486b")
                       .attr("stroke-width","0px");
