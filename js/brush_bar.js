@@ -20,13 +20,36 @@ d3.json("data/" + brush_bar.filename, function(my_data){
     }
 
     //draw chart
-    var my_chart = brush_bar_chart()
+    var my_chart = initial_bar()
         .width(width)
         .height(height)
         .my_data(chart_data.brush)
-        .focus_data(chart_data.chart)
         .x_var("date")
         .y_var('no_of_entries');
+
+    my_chart(svg);
+
+
+    setTimeout(function(){
+
+        var my_chart = brush_bar_chart()
+            .width(width)
+            .height(height)
+            .my_data(chart_data.brush)
+            .focus_data(chart_data.chart)
+            .x_var("date")
+            .y_var('no_of_entries');
+
+        my_chart(svg);
+        }, brush_bar.transition_time*3);
+
+  //  var my_chart = brush_bar_chart()
+   //     .width(width)
+    //    .height(height)
+     //   .my_data(chart_data.brush)
+      //  .focus_data(chart_data.chart)
+      //  .x_var("date")
+      //  .y_var('no_of_entries');
 
     my_chart(svg);
 

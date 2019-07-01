@@ -12,7 +12,6 @@ function brush_bar_chart() {
         height_2=0,
         my_data = [],
         focus_data = [],
-        brush_height = 80,
         margin_bottom = 30,
         start_plus = 3,
         start_width = 8,
@@ -22,9 +21,10 @@ function brush_bar_chart() {
     //core functionality copied from https://bl.ocks.org/mbostock/34f08d5e11952a80609169b7917d4172
     function my(svg) {
 
+        svg = svg.append("g");
         //define responsive margins.
-        var margin = {top: 20, right: 20, bottom: brush_height+margin_bottom, left: 40};
-        var margin_2 = {top: height  - brush_height, right: 20, bottom: 30, left: 40};
+        var margin = {top: 80, right: 20, bottom: brush_bar.brush_height+margin_bottom, left: 40};
+        var margin_2 = {top: height  - brush_bar.brush_height, right: 20, bottom: 30, left: 40};
         //set width and heights
         width = width - margin.left - margin.right;
         height_2 = height - margin_2.top - margin_2.bottom;
@@ -38,7 +38,6 @@ function brush_bar_chart() {
 
         //set axes
         var x_axis = d3.axisBottom(x_scale);
-        var x_axis_2 = d3.axisBottom(x2_scale);
         var y_axis = d3.axisLeft(y_scale);
 
         //set initial scales
@@ -80,8 +79,6 @@ function brush_bar_chart() {
                 .attr("transform", "translate(" + margin_2.left + "," + margin_2.top + ")");
 
             //x_axis, bar group and brush
-            context.append("g").attr("class", "axis axis--x");
-            context.append("g").attr("class", "bar_group");
             context.append("g").attr("class", "brush");
 
             //now append zoom - needs to be below 'focus' rects otherwise tooltips won't work
@@ -100,22 +97,7 @@ function brush_bar_chart() {
             context = svg.select(".context");
         }
 
-        //now for the bars.
 
-        //first the the context (brush bars)
-
-        var my_group = context.select(".bar_group").selectAll(".context_bar_group")
-                              .data(my_data);
-
-        my_group.exit().remove();
-        //enter new groups
-        var enter = my_group.enter().append("g").attr("class","context_bar_group");
-        //append
-        enter.append("rect").attr("class","context_rect");
-        //merge
-        my_group = my_group.merge(enter);
-
-        update_rects(my_group.select(".context_rect"),x2_scale,y2_scale, height_2);
 
         //now the focus (top chart bars)
         var focus_group = focus.select(".bar_group").selectAll(".focus_bar_group")
@@ -134,18 +116,23 @@ function brush_bar_chart() {
         //set the axes, brush and zoom
         focus.select(".axis--x")
             .call(x_axis)
-            .attr("transform", "translate(0," + height + ")");
+            .attr("transform", "translate(0," + height + ")")
+            .attr("opacity","0")
+            .transition()
+            .duration(brush_bar.transition_time)
+            .attr("opacity","1")
 
         focus.select(".axis--y")
-            .call(y_axis);
-
-        context.select(".axis--x")
-            .call(x_axis_2)
-            .attr("transform", "translate(0," + height_2 + ")");
+            .call(y_axis)
+            .attr("opacity","0")
+            .transition()
+            .duration(brush_bar.transition_time*2)
+            .attr("opacity","1")
 
         context.select(".brush")
             .call(brush)
-            .call(brush.move, x_scale.range());
+            .call(brush.move, x_scale.range())
+
 
         svg.select(".zoom")
             .attr("width", width)
@@ -160,6 +147,11 @@ function brush_bar_chart() {
         var end_brush = x_scale(d3.timeMonth.offset(x_scale.domain()[0],(start_plus + start_width)));
 
         context.select(".brush").call(brush.move, [start_brush,end_brush]);
+
+        d3.selectAll(".rect.selection")
+            .transition()
+            .duration(brush_bar.transition_time*2)
+            .style("opacity","1")
 
         //brush function.
         function brushed() {
@@ -189,17 +181,6 @@ function brush_bar_chart() {
         }
 
 
-        function update_rects(rect_group,my_x_scale,my_y_scale,my_height){
-            //brush rects (static after initial load)
-            //width === no.of days in the month - 2px
-            rect_group.attr("id", (d,i) => i)
-                      .attr("x",d => my_x_scale(d[x_var]) + 1)
-                      .attr("y", d =>  my_y_scale(d[y_var]))
-                      .attr("height", d => my_height - my_y_scale(d[y_var]))
-                      .attr("width",d => x_scale(d3.timeDay.offset(x_scale.domain()[0],d.days)) - 2)
-                      .attr("fill","#6b486b")
-                      .attr("stroke-width","0px");
-        }
 
         function update_sub_rects(rect_group,my_x_scale,my_y_scale){
 
@@ -240,7 +221,11 @@ function brush_bar_chart() {
                             d3.selectAll(".focus_rect").attr("opacity",1);
                             d3.select(".tooltip").style("visibility","hidden")
                       })
-                      .on("click",function(d){window.open(d.url)});
+                      .on("click",function(d){window.open(d.url)})
+                      .attr("opacity","0")
+                      .transition()
+                      .duration(brush_bar.transition_time*2)
+                      .attr("opacity","1")
 
          function get_colour_multiplier(my_type){
                 //see above
@@ -314,3 +299,143 @@ function brush_bar_chart() {
     return my;
 }
 
+
+
+function initial_bar() {
+    //REUSABLE initial bar chart..
+
+
+    var x_var="",
+        y_var="",
+        width=0,
+        height=0,
+        height_2=0,
+        my_data = [];
+
+    //core functionality copied from https://bl.ocks.org/mbostock/34f08d5e11952a80609169b7917d4172
+    function my(svg) {
+
+         //define  margin.
+        var margin = {top: 80, right: 80, bottom: 30, left: 40};
+        var margin_2 = {top: height  - brush_bar.brush_height, right: 20, bottom: 30, left: 40};
+        //set width and heights
+        width = width - margin.left - margin.right;
+        height_2 = height - margin_2.top - margin_2.bottom;
+        height = height - margin.top - margin.bottom;
+        svg = svg.append("g").attr("transform","translate(" + margin.left + "," + margin.top + ")")
+
+        //set scales
+        var x_scale = d3.scaleTime().range([0, width]);
+        var y_scale = d3.scaleLinear().range([height, 0]);
+        var y2_scale = d3.scaleLinear().range([height_2, 0]);
+
+        //set axes
+        var x_axis = d3.axisBottom(x_scale).tickSizeOuter(0);
+        var y_axis = d3.axisLeft(y_scale).tickSizeOuter(0);
+
+        //set initial scales
+        x_scale.domain(d3.extent(my_data, function(d) { return d[x_var] }));
+        y_scale.domain([0, d3.max(my_data, function(d) { return d[y_var]; })]);
+        y2_scale.domain(y_scale.domain());
+
+
+        //set once only items
+        if(d3.select(".axis--x")._groups[0][0] == null){
+
+            //x_axis, bar group and brush
+            svg.append("g").attr("class", "axis axis--x");
+            svg.append("g").attr("class", "axis axis--y");
+            svg.append("g").attr("class", "bar_group");
+            svg.append("text").attr("class","brush_bar_title")
+
+        }
+
+        svg.select(".brush_bar_title")
+            .attr("x",width/2)
+            .attr("y",-margin.top*0.5)
+            .text(brush_bar.chart_title)
+            .attr("opacity",0)
+            .transition()
+            .duration(brush_bar.transition_time)
+            .attr("opacity",1)
+
+        var my_group = svg.select(".bar_group").selectAll(".context_bar_group")
+            .data(my_data);
+
+        my_group.exit().remove();
+        //enter new groups
+        var enter = my_group.enter().append("g").attr("class","context_bar_group");
+        //append
+        enter.append("rect").attr("class","context_rect");
+        //merge
+        my_group = my_group.merge(enter);
+
+        //set the axes, brush and zoom
+        svg.select(".axis--x")
+            .call(x_axis)
+            .attr("transform", "translate(0," + height + ")");
+
+        svg.select(".axis--y")
+            .call(y_axis)
+            .attr("opacity",1)
+            .transition()
+            .delay(brush_bar.transition_time)
+            .duration(brush_bar.transition_time*2)
+            .attr("opacity",0)
+
+
+        my_group.select(".context_rect").attr("id", (d,i) => i)
+            .attr("x",d => x_scale(d[x_var]) + 1)
+            .attr("y", d =>  y_scale(d[y_var]))
+            .attr("height",d => height - y_scale(d[y_var]))
+            .attr("width",d => x_scale(d3.timeDay.offset(x_scale.domain()[0],d.days)) - 2)
+            .attr("fill","#6b486b")
+            .attr("stroke-width","0px")
+            .attr("opacity",0)
+            .transition()
+            .duration(brush_bar.transition_time)
+            .attr("opacity",1)
+            .transition()
+            .duration(brush_bar.transition_time*2)
+            .attr("y",d => (height-height_2) + y2_scale(d[y_var]))
+            .attr("height",d => height_2 - y2_scale(d[y_var]))
+
+    }
+
+
+    my.width = function(value) {
+        if (!arguments.length) return width;
+        width = value;
+        return my;
+    };
+
+    my.height = function(value) {
+        if (!arguments.length) return height;
+        height = value;
+        return my;
+    };
+
+
+
+    my.my_data = function(value) {
+        if (!arguments.length) return my_data;
+        my_data = value;
+        return my;
+    };
+
+
+    my.x_var = function(value) {
+        if (!arguments.length) return x_var;
+        x_var = value;
+        return my;
+    };
+
+    my.y_var = function(value) {
+        if (!arguments.length) return y_var;
+        y_var = value;
+        return my;
+    };
+
+
+    return my;
+}

@@ -26,7 +26,7 @@ body{
   margin-right: 40px;
 }
 
-.focus_bar_group, .context_bar_group  {
+.focus_bar_group {
   clip-path: url(#clip);
 }
 
@@ -34,4 +34,22 @@ body{
   cursor: move;
   fill: none;
   pointer-events: all;
+}
+
+.axis line{
+  display: none;
+}
+
+.axis path{
+  stroke: #A0A0A0;
+}
+
+.brush_bar_title{
+  font-weight: bold;
+  font-size: 2.5em;
+  text-anchor: middle;
+}
+
+.rect.selection{
+  opacity: 0;
 }
